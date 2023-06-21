@@ -88,6 +88,8 @@ int compareObjects(const BSONObj& firstObj,
 /* BSONObj ------------------------------------------------------------*/
 
 void BSONObj::_assertInvalid(int maxSize) const {
+    // print stack trace here
+
     StringBuilder ss;
     int os = objsize();
     ss << "BSONObj size: " << os << " (0x" << integerToHex(os) << ") is invalid. "

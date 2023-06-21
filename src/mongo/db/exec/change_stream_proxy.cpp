@@ -82,7 +82,7 @@ void ChangeStreamProxyStage::_validateResumeToken(const Document& event) const {
         return;
     }
     // Confirm that the document _id field matches the original resume token in the sort key field.
-    auto eventBSON = event.toBson();
+    auto eventBSON = event.toLargeBson();
     auto resumeToken = event.metadata().getSortKey();
     auto idField = eventBSON.getObjectField("_id");
     invariant(!resumeToken.missing());

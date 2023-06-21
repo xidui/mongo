@@ -268,6 +268,7 @@ public:
      */
     void toBson(BSONObjBuilder* builder, size_t recursionLevel = 1) const;
     BSONObj toBson() const;
+    BSONObj toLargeBson() const;
 
     /**
      * Serializes this document iff the conversion is "trivial," meaning that the underlying storage
