@@ -463,7 +463,53 @@ BSONObj Document::toBson() const {
 
     BSONObjBuilder bb;
     toBson(&bb);
-    return bb.obj();
+    // If I don't change this, there is another stack trace failing to get the change stream, which I cannot figure out easily where the caller is.
+    // And after I updated this to use a larger limit trait, things magically works:
+    // * update 16MB field success
+    // * update 17MB field fail with size limit
+    // * change stream get 32MB result success
+
+    /*
+
+./mongod(_ZN5mongo17__printStackTraceEv+0x3a) [0x557470c5b26a]
+./mongod(_ZNK5mongo7BSONObj14_assertInvalidEi+0x42) [0x557470c5db32]
+./mongod(_ZNK5mongo8Document6toBsonEv+0x62c) [0x557470a20e4c]
+./mongod(+0x189576e) [0x55746f20a76e]
+./mongod(+0x1897832) [0x55746f20c832]
+./mongod(_ZN5mongo14CommandHelpers20runCommandInvocationEPNS_16OperationContextERKNS_12OpMsgRequestEPNS_17CommandInvocationEPNS_3rpc21ReplyBuilderInterfaceE+0x81) [0x55746f93d881]
+./mongod(+0x1541076) [0x55746eeb6076]
+./mongod(+0x1543c81) [0x55746eeb8c81]
+./mongod(+0x15456c7) [0x55746eeba6c7]
+./mongod(_ZN5mongo23ServiceEntryPointCommon13handleRequestEPNS_16OperationContextERKNS_7MessageERKNS0_5HooksE+0x341) [0x55746eebb1b1]
+./mongod(_ZN5mongo23ServiceEntryPointMongod13handleRequestEPNS_16OperationContextERKNS_7MessageE+0x3f) [0x55746eea5f0f]
+./mongod(_ZN5mongo19ServiceStateMachine15_processMessageENS0_11ThreadGuardE+0x109) [0x55746eeb1d19]
+./mongod(_ZN5mongo19ServiceStateMachine15_runNextInGuardENS0_11ThreadGuardE+0x79) [0x55746eeaf919]
+./mongod(+0x153b6bb) [0x55746eeb06bb]
+./mongod(_ZN5mongo9transport26ServiceExecutorSynchronous8scheduleESt8functionIFvvEENS0_15ServiceExecutor13ScheduleFlagsENS0_23ServiceExecutorTaskNameE+0x181) [0x557470550be1]
+./mongod(_ZN5mongo19ServiceStateMachine22_scheduleNextWithGuardENS0_11ThreadGuardENS_9transport15ServiceExecutor13ScheduleFlagsENS2_23ServiceExecutorTaskNameENS0_9OwnershipE+0xe4) [0x55746eeadfb4]
+./mongod(_ZN5mongo19ServiceStateMachine15_sourceCallbackENS_6StatusE+0x694) [0x55746eeaf024]
+./mongod(+0x153a121) [0x55746eeaf121]
+./mongod(_ZN5mongo19ServiceStateMachine14_sourceMessageENS0_11ThreadGuardE+0x28c) [0x55746eeaf50c]
+./mongod(_ZN5mongo19ServiceStateMachine15_runNextInGuardENS0_11ThreadGuardE+0x12b) [0x55746eeaf9cb]
+./mongod(+0x153b6bb) [0x55746eeb06bb]
+./mongod(+0x2bdc2f4) [0x5574705512f4]
+./mongod(+0x2fb0de1) [0x557470925de1]
+./mongod(+0x2fb0e58) [0x557470925e58]
+/lib/x86_64-linux-gnu/libpthread.so.0(+0x8608) [0x7f69802f6608]
+/lib/x86_64-linux-gnu/libc.so.6(clone+0x42) [0x7f698021b132]
+
+     * */
+    return bb.obj<BSONObj::StripeChangeStreamTrait>();
+}
+
+BSONObj Document::toLargeBson() const {
+    if (!storage().isModified() && !storage().stripMetadata()) {
+        return storage().bsonObj();
+    }
+
+    BSONObjBuilder bb;
+    toBson(&bb);
+    return bb.obj<BSONObj::StripeChangeStreamTrait>();
 }
 
 boost::optional<BSONObj> Document::toBsonIfTriviallyConvertible() const {

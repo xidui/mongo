@@ -105,6 +105,9 @@ public:
     struct LargeSizeTrait {
         constexpr static int MaxSize = BufferMaxSize;
     };
+    struct StripeChangeStreamTrait {
+        constexpr static int MaxSize = BSONObjMaxInternalSize * 3;
+    };
 
     // Declared in bsonobj_comparator_interface.h.
     class ComparatorInterface;
